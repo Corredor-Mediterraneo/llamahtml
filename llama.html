@@ -3,713 +3,472 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LlamaHTML </title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <title>LlamaHTML Pro</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css" id="highlight-theme">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
     <style>
-        html, body {
-            height: 100vh;
-            overflow: hidden; 
-        }
-        .app-container {
-            height: 100vh;
-        }
-        .main-content {
-            height: 100vh; 
-            overflow: hidden; 
-        }
-        .chat-container {
-            flex-grow: 1; 
-            overflow-y: auto; 
-            min-height: 0; 
-        }
-        .chat-input-container {
-            flex-shrink: 0; 
-        }
-        .user-message .message-body {
-            background-color: var(--bs-primary-bg-subtle);
-            border-color: var(--bs-primary-border-subtle);
-        }
-        .message-body pre {
-            position: relative;
-            padding-top: 40px;
-        }
-        .code-actions {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            display: flex;
-            gap: 8px;
-        }
-        .code-action-button {
-            padding: 4px 8px;
-            font-size: 12px;
-            background-color: var(--bs-secondary-bg);
-            border: 1px solid var(--bs-border-color);
-            border-radius: 4px;
-            cursor: pointer;
-            opacity: 0.8;
-            transition: all 0.2s ease;
-        }
-        .code-action-button:hover {
-            opacity: 1;
-            background-color: var(--bs-tertiary-bg);
-        }
-        .code-action-button.copied {
-            background-color: var(--bs-success);
-            color: white;
-        }
-        #chatInput {
-            resize: none;
-        }
-        #sidebar {
-            transition: transform .3s ease-in-out, width .3s ease-in-out;
-        }
+        :root { --chat-max-width: 1200px; }
+        html, body { height: 100vh; overflow: hidden; }
+        .app-container { height: 100vh; }
+        .main-content { height: 100vh; overflow: hidden; position: relative; }
+        .chat-container { flex-grow: 1; overflow-y: auto; scroll-behavior: smooth; max-width: var(--chat-max-width); margin: 0 auto; padding: 1rem; }
+        
+        /* Custom Scrollbar */
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-track { background: transparent; }
+        .chat-container::-webkit-scrollbar-thumb { background-color: rgba(128,128,128, 0.3); border-radius: 20px; }
+
+        .message-body pre { position: relative; padding-top: 40px; }
+        .code-actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 8px; }
+        .code-action-button { padding: 4px 8px; font-size: 12px; background-color: var(--bs-secondary-bg); border: 1px solid var(--bs-border-color); border-radius: 4px; cursor: pointer; opacity: 0.8; transition: opacity 0.2s; }
+        .code-action-button:hover { opacity: 1; background-color: var(--bs-tertiary-bg); }
+        
+        #chatInput { resize: none; max-height: 200px; }
+        .delete-btn { opacity: 0; transition: opacity 0.2s; }
+        .list-group-item:hover .delete-btn { opacity: 1; }
+        
+        /* Utility */
+        .staged-file { cursor: pointer; user-select: none; }
+        .staged-file:hover { text-decoration: underline; color: var(--bs-primary); }
     </style>
 </head>
 <body>
     <div class="app-container d-flex">
-        <button class="btn btn-light d-md-none m-2 position-fixed" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" aria-controls="sidebar" style="z-index: 1045; top: 0; left: 0;">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/>
-            </svg>
+        <!-- Mobile Sidebar Toggle -->
+        <button class="btn btn-light d-md-none m-2 position-fixed" type="button" data-bs-toggle="offcanvas" data-bs-target="#sidebar" style="z-index: 1045;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5"/></svg>
         </button>
+
+        <!-- Sidebar -->
         <aside class="d-flex flex-column flex-shrink-0 p-3 bg-body-tertiary offcanvas-md offcanvas-start" tabindex="-1" id="sidebar" style="width: 280px;">
             <div class="offcanvas-header">
-                <h5 class="offcanvas-title">LlamaHTML Menu</h5>
+                <h5 class="offcanvas-title">LlamaHTML</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="offcanvas" data-bs-target="#sidebar" aria-label="Close"></button>
             </div>
-            <div class="d-grid gap-2 mb-3" id="sidebar-header">
-                <button class="btn btn-primary" id="newChatBtn">New chat</button>
+            <div class="d-grid gap-2 mb-3">
+                <button class="btn btn-primary" id="newChatBtn">+ New Chat</button>
             </div>
             <div class="list-group list-group-flush border-bottom scrollarea flex-grow-1" id="sessionsList">
             </div>
             <div class="mt-3">
-                <div class="server-config mb-3">
-                    <input type="url" class="form-control" id="serverUrl" placeholder="Server URL" value="http://127.0.0.1:8080">
-                </div>
+                <input type="url" class="form-control mb-2" id="serverUrl" placeholder="http://127.0.0.1:8080">
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-secondary" id="settingsBtn" data-bs-toggle="modal" data-bs-target="#settingsModal">Settings</button>
-                    <button class="btn btn-outline-secondary" id="themeSwitcher">🌙</button>
+                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#settingsModal">Settings</button>
+                    <button class="btn btn-sm btn-outline-secondary" id="themeSwitcher">🌙</button>
                 </div>
             </div>
         </aside>
+
+        <!-- Main Content -->
         <main class="main-content flex-grow-1 d-flex flex-column">
             <div class="chat-container p-3" id="chatContainer">
-                <div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center">
-                    <div>
-                        <h2>LlamaHTML</h2>
-                        <p class="lead text-body-secondary">Start a conversation with your local Llama model</p>
-                    </div>
+                <div class="empty-state text-center h-100 d-flex flex-column justify-content-center">
+                    <h2>LlamaHTML</h2>
+                    <p class="text-body-secondary">Connected via IndexedDB for Firefox Stability</p>
                 </div>
             </div>
+            
             <div class="chat-input-container p-3 bg-body-tertiary border-top">
-                <div class="input-area">
-                    <div id="stagedFilesArea" class="d-flex flex-wrap gap-2 mb-2" style="display: none;">
-                    </div>
-                    <div class="input-group">
-                        <textarea class="form-control" id="chatInput" placeholder="Message Llama..." rows="1"></textarea>
-                        <label for="fileInput" class="btn btn-outline-secondary" title="Attach files">📎</label>
-                        <input type="file" id="fileInput" multiple class="d-none">
-                        <button class="btn btn-primary" id="sendButton">Send</button>
-                    </div>
-                    <div class="status-bar text-center text-body-secondary small mt-2" id="statusBar"></div>
+                <div id="stagedFilesArea" class="d-flex flex-wrap gap-2 mb-2" style="display: none;"></div>
+                <div class="input-group">
+                    <textarea class="form-control" id="chatInput" placeholder="Message Llama... (Ctrl+Enter to send)" rows="1"></textarea>
+                    <label for="fileInput" class="btn btn-outline-secondary">📎</label>
+                    <input type="file" id="fileInput" multiple class="d-none">
+                    <button class="btn btn-primary" id="sendButton">Send</button>
                 </div>
+                <div class="status-bar text-center text-body-secondary small mt-2" id="statusBar"></div>
             </div>
         </main>
     </div>
-    <div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="settingsModalLabel">Settings</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
+					<h5 class="modal-title">Model Settings</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+				</div>
                 <div class="modal-body">
-                    <div class="mb-3"><label for="temperature" class="form-label">Temperature</label><input type="number" class="form-control" id="temperature" min="0" max="2" step="0.1" value="0.7"><small class="form-text text-muted">Controls randomness.</small></div>
-                    <div class="mb-3"><label for="nPredict" class="form-label">Max Tokens</label><input type="number" class="form-control" id="nPredict" min="1" step="1" value="2048"><small class="form-text text-muted">Max tokens to generate.</small></div>
-                    <div class="mb-3"><label for="topP" class="form-label">Top P</label><input type="number" class="form-control" id="topP" min="0" max="1" step="0.01" value="0.95"><small class="form-text text-muted">Nucleus sampling.</small></div>
-                    <div class="mb-3"><label for="topK" class="form-label">Top K</label><input type="number" class="form-control" id="topK" min="1" step="1" value="40"><small class="form-text text-muted">Top-k sampling.</small></div>
-                    <div class="mb-3"><label for="stopSequences" class="form-label">Stop Sequences</label><input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>"><small class="form-text text-muted">Comma-separated strings.</small></div>
-                    <div class="form-check"><input class="form-check-input" type="checkbox" id="rememberServerUrl"><label class="form-check-label" for="rememberServerUrl">Remember Server URL</label></div>
+                    <div class="mb-3"><label class="form-label">Temperature</label><input type="number" class="form-control" id="temperature" step="0.1" value="0.7"></div>
+                    <div class="mb-3">
+						<label class="form-label">Max Tokens</label>
+						<input type="number" class="form-control" id="nPredict" value="32000">
+					</div>
+                    <div class="mb-3">
+						<label class="form-label">Top P</label>     
+						<input type="number" class="form-control" id="topP" min="0" max="1" step="0.01" value="0.95">
+						<small class="form-text text-muted">Nucleus sampling.</small>
+					</div>
+                    <div class="mb-3">
+						<label class="form-label">Top K</label>
+						<input type="number" class="form-control" id="topK" min="1" step="1" value="40">
+						<small class="form-text text-muted">Top-k sampling.</small>
+					</div>
+                    <div class="mb-3">
+						<label class="form-label">Stop Sequences</label>
+						<input type="text" class="form-control" id="stopSequences" value="USER:, \nUSER:, <|user|>">
+						<small class="form-text text-muted">Comma-separated strings.</small>
+					</div>
+                    <div class="form-check">
+						<input class="form-check-input" type="checkbox" id="rememberServerUrl">
+						<label class="form-check-label" for="rememberServerUrl">Remember Server URL</label>
+					</div>
                 </div>
             </div>
         </div>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const SESSION_INDEX_KEY = 'llamaChatIndex';
-        const SESSION_DATA_PREFIX = 'llamaChatSession_';
-        const MAX_TEXT_FILE_EMBED_SIZE = 200 * 1024;
-        const elements = {
-            serverUrl: document.getElementById('serverUrl'),
-            rememberServerUrl: document.getElementById('rememberServerUrl'),
-            chatInput: document.getElementById('chatInput'),
-            sendButton: document.getElementById('sendButton'),
-            statusBar: document.getElementById('statusBar'),
-            chatContainer: document.getElementById('chatContainer'),
-            themeSwitcher: document.getElementById('themeSwitcher'),
-            temperature: document.getElementById('temperature'),
-            nPredict: document.getElementById('nPredict'),
-            topP: document.getElementById('topP'),
-            topK: document.getElementById('topK'),
-            stopSequences: document.getElementById('stopSequences'),
-            sessionsList: document.getElementById('sessionsList'),
-            newChatBtn: document.getElementById('newChatBtn'),
-            fileInput: document.getElementById('fileInput'),
-            stagedFilesArea: document.getElementById('stagedFilesArea'),
-            settingsBtn: document.getElementById('settingsBtn'),
-            settingsModal: document.getElementById('settingsModal'),
-            sidebar: document.getElementById('sidebar'),
-            highlightTheme: document.getElementById('highlight-theme')
+        /** 
+         * Optimized LlamaHTML Application
+         * Refactored for performance, state encapsulation, and cleaner DB handling.
+         */
+        
+        const CONFIG = {
+            db: 'LlamaChatDB',
+            storeChats: 'chats',
+            storeMeta: 'metadata'
         };
-        let chatHistory = [];
-        let serverAvailable = false;
-        let messageCounter = 0;
-        let currentSessionId = null;
-        let currentAbortController = null;
-        let stagedFiles = [];
-        let sidebarInstance = null;
-        function initializeTheme() {
-            const savedTheme = localStorage.getItem('theme') || 'light';
-            setTheme(savedTheme);
-        }
-        function setTheme(theme) {
-            document.documentElement.setAttribute('data-bs-theme', theme);
-            elements.themeSwitcher.textContent = theme === 'dark' ? '☀️' : '🌙';
-            const lightThemeUrl = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css';
-            const darkThemeUrl = 'https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css';
-            elements.highlightTheme.href = theme === 'dark' ? darkThemeUrl : lightThemeUrl;
-            localStorage.setItem('theme', theme);
-        }
-        function toggleTheme() {
-            const currentTheme = document.documentElement.getAttribute('data-bs-theme') || 'light';
-            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-            setTheme(newTheme);
-        }
-        function initialize() {
-            sidebarInstance = new bootstrap.Offcanvas(elements.sidebar);
-            loadServerUrl();
-            setupEventListeners();
-            initializeTheme();
-            configureMarked();
-            checkServerStatus();
-            populateSessions();
-            startNewSession();
-            updateSendButtonState();
-        }
-        function configureMarked() {
-            marked.setOptions({
-                highlight: function(code, lang) {
-                    const language = hljs.getLanguage(lang) ? lang : 'plaintext';
-                    return hljs.highlight(code, { language, ignoreIllegals: true }).value;
-                },
-                gfm: true,
-                breaks: true,
-                langPrefix: 'hljs language-',
-            });
-        }
-        function setupEventListeners() {
-            elements.sendButton.addEventListener('click', handleSendPrompt);
-            elements.newChatBtn.addEventListener('click', () => {
-                if (currentAbortController) handleStopGeneration();
-                startNewSession();
-                closeMobileSidebar();
-            });
-            elements.themeSwitcher.addEventListener('click', toggleTheme);
-            elements.rememberServerUrl.addEventListener('change', handleRememberUrlChange);
-            elements.serverUrl.addEventListener('input', handleServerUrlInput);
-            elements.chatInput.addEventListener('input', () => {
-                updateSendButtonState();
-                autoResizeTextarea(elements.chatInput);
-            });
-            elements.chatInput.addEventListener('keydown', (event) => {
-                if ((event.ctrlKey || event.metaKey) && event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    if (!elements.sendButton.disabled && !elements.sendButton.textContent.includes('Stop')) {
-                        handleSendPrompt();
-                    }
-                }
-            });
-            elements.fileInput.addEventListener('change', handleFileSelection);
-            elements.stagedFilesArea.addEventListener('click', handleRemoveStagedFile);
-            elements.chatContainer.addEventListener('click', function(event) {
-                if (event.target.classList.contains('copy-code-button')) handleCopyCodeClick(event.target);
-                else if (event.target.classList.contains('download-code-button')) handleDownloadCodeClick(event.target);
-            });
-            elements.sessionsList.addEventListener('click', function(event) {
-                const sessionItem = event.target.closest('.list-group-item');
-                const deleteBtn = event.target.closest('.delete-btn');
-                if (deleteBtn && sessionItem) {
-                    event.stopPropagation();
-                    handleDeleteSession(sessionItem.dataset.sessionId);
-                } else if (sessionItem) {
-                    handleLoadSession(sessionItem.dataset.sessionId);
-                    closeMobileSidebar();
-                }
-            });
-        }
-        function closeMobileSidebar() {
-            if (window.innerWidth < 768) {
-                sidebarInstance.hide();
+
+        // --- Database Layer (Singleton Pattern) ---
+        const DB = {
+            instance: null,
+            
+            async connect() {
+                if (this.instance) return this.instance;
+                return new Promise((resolve, reject) => {
+                    const request = indexedDB.open(CONFIG.db, 1);
+                    request.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains(CONFIG.storeChats)) db.createObjectStore(CONFIG.storeChats, { keyPath: 'id' });
+                        if (!db.objectStoreNames.contains(CONFIG.storeMeta)) db.createObjectStore(CONFIG.storeMeta, { keyPath: 'id' });
+                    };
+                    request.onsuccess = () => { this.instance = request.result; resolve(request.result); };
+                    request.onerror = () => reject(request.error);
+                });
+            },
+
+            async saveChat(id, history, name) {
+                const db = await this.connect();
+                const tx = db.transaction([CONFIG.storeChats, CONFIG.storeMeta], 'readwrite');
+                tx.objectStore(CONFIG.storeChats).put({ id, history });
+                tx.objectStore(CONFIG.storeMeta).put({ id, name, lastUpdate: Date.now() });
+                return new Promise(r => tx.oncomplete = r);
+            },
+
+            async getChat(id) {
+                const db = await this.connect();
+                return new Promise(r => {
+                    const req = db.transaction(CONFIG.storeChats).objectStore(CONFIG.storeChats).get(id);
+                    req.onsuccess = () => r(req.result);
+                });
+            },
+
+            async getAllSessions() {
+                const db = await this.connect();
+                return new Promise(r => {
+                    const req = db.transaction(CONFIG.storeMeta).objectStore(CONFIG.storeMeta).getAll();
+                    req.onsuccess = () => r(req.result.sort((a,b) => b.lastUpdate - a.lastUpdate));
+                });
+            },
+
+            async deleteChat(id) {
+                const db = await this.connect();
+                const tx = db.transaction([CONFIG.storeChats, CONFIG.storeMeta], 'readwrite');
+                tx.objectStore(CONFIG.storeChats).delete(id);
+                tx.objectStore(CONFIG.storeMeta).delete(id);
+                return new Promise(r => tx.oncomplete = r);
             }
-        }
-        function autoResizeTextarea(textarea) {
-            textarea.style.height = 'auto';
-            textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
-        }
-        function loadServerUrl() {
-            const rememberedUrl = localStorage.getItem('llamaServerUrl');
-            const shouldRemember = localStorage.getItem('rememberLlamaServerUrl') === 'true';
-            elements.rememberServerUrl.checked = shouldRemember;
-            if (shouldRemember && rememberedUrl) {
-                elements.serverUrl.value = rememberedUrl;
-            }
-        }
-        function handleRememberUrlChange() {
-            if (elements.rememberServerUrl.checked) {
-                localStorage.setItem('llamaServerUrl', elements.serverUrl.value.trim());
-                localStorage.setItem('rememberLlamaServerUrl', 'true');
-            } else {
-                localStorage.removeItem('llamaServerUrl');
-                localStorage.removeItem('rememberLlamaServerUrl');
-            }
-        }
-        let serverUrlDebounceTimer;
-        function handleServerUrlInput() {
-            handleRememberUrlChange();
-            clearTimeout(serverUrlDebounceTimer);
-            serverUrlDebounceTimer = setTimeout(() => {
-                checkServerStatus();
-                updateSendButtonState();
-            }, 500);
-        }
-        async function checkServerStatus() {
-            const serverUrl = elements.serverUrl.value.trim();
-            if (!isValidHttpUrl(serverUrl)) {
-                showStatus("Invalid server URL format.", "danger");
-                serverAvailable = false;
-                updateSendButtonState();
-                return;
-            }
-            showStatus("Server URL looks valid. Ready to send.", "info");
-            serverAvailable = true;
-            updateSendButtonState();
-        }
-        function updateSendButtonState() {
-            if (currentAbortController) {
-                elements.sendButton.disabled = false;
-                return;
-            }
-            const urlValid = isValidHttpUrl(elements.serverUrl.value.trim());
-            const isLoading = elements.statusBar.querySelector('.spinner-border') !== null;
-            const canSend = urlValid && !isLoading && (elements.chatInput.value.trim().length > 0 || stagedFiles.length > 0);
-            elements.sendButton.disabled = !canSend;
-        }
-        function isValidHttpUrl(string) {
-            try {
-                const url = new URL(string);
-                return url.protocol === "http:" || url.protocol === "https:";
-            } catch (_) {
-                return false;
-            }
-        }
-        function handleFileSelection(event) {
-            const files = event.target.files;
-            if (!files) return;
-            showLoading(true, "Processing files...");
-            const newFiles = Array.from(files).filter(f => !stagedFiles.some(sf => sf.name === f.name));
-            if (newFiles.length !== files.length) showStatus("Duplicate filenames were ignored.", "warning");
-            if (newFiles.length === 0) {
-                showLoading(false);
-                return;
-            }
-            let filesProcessed = 0;
-            newFiles.forEach(file => {
-                const reader = new FileReader();
-                const fileData = { file, name: file.name, type: file.type, content: null, error: null };
-                stagedFiles.push(fileData);
-                reader.onload = e => {
-                    fileData.content = e.target.result;
-                    filesProcessed++;
-                    if (filesProcessed === newFiles.length) finishFileProcessing();
+        };
+
+        // --- Application Logic ---
+        const App = {
+            state: {
+                chatHistory: [],
+                currentSessionId: null,
+                stagedFiles: [],
+                abortController: null
+            },
+
+            elements: {},
+
+            init() {
+                this.elements = {
+                    serverUrl: document.getElementById('serverUrl'),
+                    chatInput: document.getElementById('chatInput'),
+                    sendButton: document.getElementById('sendButton'),
+                    statusBar: document.getElementById('statusBar'),
+                    chatContainer: document.getElementById('chatContainer'),
+                    sessionsList: document.getElementById('sessionsList'),
+                    fileInput: document.getElementById('fileInput'),
+                    stagedFilesArea: document.getElementById('stagedFilesArea'),
+                    themeSwitcher: document.getElementById('themeSwitcher')
                 };
-                reader.onerror = e => {
-                    fileData.error = `Error reading file: ${e.target.error?.message || 'Unknown'}`;
-                    filesProcessed++;
-                    if (filesProcessed === newFiles.length) finishFileProcessing();
-                };
-                if (file.type.startsWith('text/') || /\.(txt|md|py|js|html|css|json|xml|csv|log)$/i.test(file.name)) {
-                    reader.readAsText(file);
-                } else {
-                    reader.readAsDataURL(file);
-                }
-            });
-            renderStagedFiles();
-            event.target.value = null;
-        }
-        function finishFileProcessing() {
-            renderStagedFiles();
-            showLoading(false);
-            updateSendButtonState();
-            elements.chatInput.focus();
-        }
-        function renderStagedFiles() {
-            elements.stagedFilesArea.innerHTML = '';
-            if (stagedFiles.length === 0) {
-                elements.stagedFilesArea.style.display = 'none';
-                updateSendButtonState();
-                return;
-            }
-            elements.stagedFilesArea.style.display = 'flex';
-            stagedFiles.forEach((fileData, index) => {
-                const item = document.createElement('div');
-                item.className = `badge d-flex align-items-center ${fileData.error ? 'text-bg-danger' : 'text-bg-secondary'}`;
-                item.title = fileData.name + (fileData.error ? ` (Error: ${fileData.error})` : '');
-                item.innerHTML = `
-                    <span class="me-2">${fileData.name}</span>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Remove file" data-index="${index}"></button>
-                `;
-                elements.stagedFilesArea.appendChild(item);
-            });
-            updateSendButtonState();
-        }
-        function handleRemoveStagedFile(event) {
-            if (event.target.matches('[data-index]')) {
-                const indexToRemove = parseInt(event.target.dataset.index, 10);
-                stagedFiles.splice(indexToRemove, 1);
-                renderStagedFiles();
-            }
-        }
-        function clearStagedFiles() {
-            stagedFiles = [];
-            renderStagedFiles();
-            elements.fileInput.value = null;
-        }
-        async function handleSendPrompt() {
-            elements.sendButton.innerHTML = `<span class="spinner-grow spinner-grow-sm" role="status" aria-hidden="true"></span> Stop`;
-            elements.sendButton.classList.replace('btn-primary', 'btn-danger');
-            elements.sendButton.removeEventListener('click', handleSendPrompt);
-            elements.sendButton.addEventListener('click', handleStopGeneration);
-            elements.chatInput.disabled = true;
-            const serverUrl = elements.serverUrl.value.trim();
-            let promptText = elements.chatInput.value.trim();
-            const temperature = parseFloat(elements.temperature.value);
-            const nPredict = parseInt(elements.nPredict.value, 10);
-            const topP = parseFloat(elements.topP.value);
-            const topK = parseInt(elements.topK.value, 10);
-            const stopSequences = elements.stopSequences.value.split(',').map(s => s.trim()).filter(Boolean);
-            if (!promptText && stagedFiles.length === 0) {
-                showStatus("Message cannot be empty.", "warning");
-                resetButtonToSendState();
-                elements.chatInput.disabled = false;
-                return;
-            }
-            const filesWithError = stagedFiles.filter(f => f.error);
-            if (filesWithError.length > 0) {
-                showStatus(`Cannot send due to errors reading files: ${filesWithError.map(f => f.name).join(', ')}`, "danger");
-                resetButtonToSendState();
-                elements.chatInput.disabled = false;
-                return;
-            }
-            let fileInfoForPrompt = "";
-            if (stagedFiles.length > 0) {
-                fileInfoForPrompt = "Attached Files:\n";
-                stagedFiles.forEach(fileData => {
-                    fileInfoForPrompt += `[File: ${fileData.name} (${fileData.type})]\n`;
-                    if (fileData.type.startsWith('text/') && fileData.content && fileData.content.length < MAX_TEXT_FILE_EMBED_SIZE) {
-                        fileInfoForPrompt += `Content:\n---\n${fileData.content}\n---\n`;
-                    } else if (!fileData.type.startsWith('text/') && fileData.content?.startsWith('data:')) {
-                        fileInfoForPrompt += `(File is binary/image - content not embedded in text prompt)\n`;
-                    } else if (fileData.type.startsWith('text/')) {
-                        fileInfoForPrompt += `(Text file content too large to embed in prompt)\n`;
+
+                // Configuration
+                this.elements.serverUrl.value = localStorage.getItem('llamaServerUrl') || "http://127.0.0.1:8080";
+                marked.setOptions({
+                    highlight: (code, lang) => {
+                        const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+                        return hljs.highlight(code, { language }).value;
+                    },
+                    breaks: true,
+                    gfm: true
+                });
+
+                // Event Listeners
+                this.setupEvents();
+                
+                // Start
+                const savedTheme = localStorage.getItem('theme') || 'light';
+                document.documentElement.setAttribute('data-bs-theme', savedTheme);
+                this.loadSessionList();
+                this.startNewSession();
+            },
+
+            setupEvents() {
+                this.elements.sendButton.addEventListener('click', () => this.sendPrompt());
+                document.getElementById('newChatBtn').addEventListener('click', () => this.startNewSession());
+                
+                // Ctrl+Enter to send
+                this.elements.chatInput.addEventListener('keydown', (e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') this.sendPrompt();
+                });
+
+                this.elements.fileInput.addEventListener('change', (e) => this.handleFileSelection(e));
+                
+                // Sidebar interactions
+                this.elements.sessionsList.addEventListener('click', async (e) => {
+                    const btn = e.target.closest('.delete-btn');
+                    const item = e.target.closest('.list-group-item');
+                    if (!item) return;
+                    
+                    const id = item.dataset.sessionId;
+                    if (btn) {
+                        e.stopPropagation();
+                        if(confirm("Delete this chat?")) {
+                            await DB.deleteChat(id);
+                            if(this.state.currentSessionId === id) this.startNewSession();
+                            this.loadSessionList();
+                        }
+                    } else {
+                        await this.loadSession(id);
                     }
                 });
-                fileInfoForPrompt += "\nUser Message:\n";
-            }
-            const fullUserContent = fileInfoForPrompt + promptText;
-            if (currentAbortController) currentAbortController.abort();
-            currentAbortController = new AbortController();
-            const userMessage = { role: 'user', content: fullUserContent, id: `msg-${messageCounter++}` };
-            chatHistory.push(userMessage);
-            renderChatHistory();
-            elements.chatInput.value = '';
-            autoResizeTextarea(elements.chatInput);
-            clearStagedFiles();
-            showLoading(true, "Connecting...");
-            const modelMessage = { role: 'model', content: '', id: `msg-${messageCounter++}` };
-            chatHistory.push(modelMessage);
-            renderChatHistory();
-            const fullPromptForLlama = formatChatHistoryForLlama(chatHistory.slice(0, -1));
-            const requestBody = {
-                prompt: fullPromptForLlama, stream: true,
-                temperature, top_p: topP, top_k: topK,
-                n_predict: nPredict === -1 ? -1 : Math.max(1, nPredict),
-                stop: stopSequences
-            };
-            let responseOk = false;
-            try {
-                const response = await fetch(`${serverUrl}/completion`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(requestBody),
-                    signal: currentAbortController.signal,
+
+                this.elements.serverUrl.addEventListener('change', () => {
+                    localStorage.setItem('llamaServerUrl', this.elements.serverUrl.value);
                 });
-                responseOk = response.ok;
-                if (!response.ok || !response.body) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-                showLoading(true, "Receiving response...");
-                const reader = response.body.getReader();
-                const decoder = new TextDecoder();
-                while (true) {
-                    const { value, done } = await reader.read();
-                    if (done) break;
-                    const chunk = decoder.decode(value, { stream: true });
-                    const lines = chunk.split('\n\n').filter(Boolean);
-                    for (const line of lines) {
-                        if (line.startsWith('data: ')) {
-                            const data = JSON.parse(line.substring(6));
-                            if (data.content) modelMessage.content += data.content;
-                            if (data.stop) break;
+
+                this.elements.themeSwitcher.addEventListener('click', () => {
+                    const current = document.documentElement.getAttribute('data-bs-theme');
+                    const target = current === 'dark' ? 'light' : 'dark';
+                    document.documentElement.setAttribute('data-bs-theme', target);
+                    localStorage.setItem('theme', target);               
+                });
+            },
+
+            async sendPrompt() {
+                const promptText = this.elements.chatInput.value.trim();
+                if (!promptText && this.state.stagedFiles.length === 0) return;
+
+                if (!this.state.currentSessionId) {
+                    this.state.currentSessionId = Date.now().toString();
+                }
+
+                // Prepare content
+                let fileContent = "";
+                this.state.stagedFiles.forEach(f => {
+                    if (f.content) fileContent += `\n[File: ${f.name}]\n${f.content}\n`;
+                });
+
+                const fullContent = fileContent + promptText;
+                this.state.chatHistory.push({ role: 'user', content: fullContent });
+                
+                // Clear UI inputs
+                this.elements.chatInput.value = '';
+                this.state.stagedFiles = [];
+                this.renderStagedFiles();
+                this.renderChatHistory(); // Render user message
+
+                // Prepare model response
+                this.state.abortController = new AbortController();
+                this.updateButtonUI(true);
+                
+                const modelMsg = { role: 'model', content: '' };
+                this.state.chatHistory.push(modelMsg);
+                const modelMsgIdx = this.state.chatHistory.length - 1;
+
+                try {
+                    const response = await fetch(`${this.elements.serverUrl.value}/completion`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            prompt: this.formatPrompt(this.state.chatHistory.slice(0, -1)),
+                            stream: true,
+                            temperature: parseFloat(document.getElementById('temperature').value),
+                            n_predict: parseInt(document.getElementById('nPredict').value)
+                        }),
+                        signal: this.state.abortController.signal
+                    });
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+                    let remainder = '';
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) break;
+
+                        remainder += decoder.decode(value, { stream: true });
+                        let lines = remainder.split('\n');
+                        remainder = lines.pop();
+
+                        for (const line of lines) {
+                            const cleanLine = line.trim();
+                            if (!cleanLine.startsWith('data: ')) continue;
+                            
+                            try {
+                                const data = JSON.parse(cleanLine.substring(6));
+                                if (data.content) {
+                                    this.state.chatHistory[modelMsgIdx].content += data.content;
+                                    this.updateLastMessageUI(this.state.chatHistory[modelMsgIdx].content);
+                                }
+                            } catch (e) {
+                                // Ignore partial JSON chunks
+                            }
                         }
                     }
-                    updateModelBubbleContent(modelMessage.id, modelMessage.content, true);
+                } catch (err) {
+                    if (err.name !== 'AbortError') this.showStatus("Error connecting to server", "danger");
+                } finally {
+                    this.state.abortController = null;
+                    this.updateButtonUI(false);
+                    
+                    // Auto-save
+                    const sessionName = this.state.chatHistory[0].content.substring(0, 30) + "...";
+                    await DB.saveChat(this.state.currentSessionId, this.state.chatHistory, sessionName);
+                    this.loadSessionList();
                 }
-                showStatus("Response complete.", "success");
-            } catch (error) {
-                if (error.name === 'AbortError') {
-                    showStatus("Request cancelled by user.", "info");
-                    if (chatHistory[chatHistory.length - 1].content.length < 15) chatHistory.pop();
-                } else {
-                    const errorMsg = !responseOk ? `Connection Error: Could not connect to server.` : error.message;
-                    showStatus(`Error: ${errorMsg}`, "danger");
-                    chatHistory.pop(); 
-                    chatHistory.pop(); 
+            },
+
+            formatPrompt(history) {
+                return history.map(m => `${m.role === 'user' ? 'USER' : 'ASSISTANT'}: ${m.content}`).join('\n') + '\nASSISTANT:';
+            },
+
+            // Optimization: Only update the last message bubble instead of re-rendering everything
+            updateLastMessageUI(content) {
+                const bubbles = this.elements.chatContainer.querySelectorAll('.message-body');
+                const lastBubble = bubbles[bubbles.length - 1];
+                if (lastBubble) {
+                    lastBubble.innerHTML = marked.parse(content);
+                    this.elements.chatContainer.scrollTop = this.elements.chatContainer.scrollHeight;
                 }
-                renderChatHistory();
-            } finally {
-                updateModelBubbleContent(modelMessage.id, modelMessage.content, false);
-                resetButtonToSendState();
-                showLoading(false);
-                elements.chatInput.disabled = false;
-                currentAbortController = null;
-                updateSendButtonState();
-                elements.chatInput.focus();
-            }
-        }
-        function handleStopGeneration() {
-            if (currentAbortController) currentAbortController.abort();
-        }
-        function resetButtonToSendState() {
-            elements.sendButton.innerHTML = 'Send';
-            elements.sendButton.classList.replace('btn-danger', 'btn-primary');
-            elements.sendButton.removeEventListener('click', handleStopGeneration);
-            elements.sendButton.addEventListener('click', handleSendPrompt);
-        }
-        function formatChatHistoryForLlama(history) {
-            return history.map(msg => {
-                if (msg.role === 'user') return `USER: ${msg.content}`;
-                if (msg.role === 'model') return `ASSISTANT: ${msg.content}`;
-                return '';
-            }).join('\n') + '\nASSISTANT:';
-        }
-        function showLoading(isLoading, message = "") {
-            if (isLoading) {
-                elements.statusBar.innerHTML = `<div class="spinner-border spinner-border-sm me-2" role="status"></div><span>${escapeHtml(message)}</span>`;
-            } else {
-                if (!elements.statusBar.classList.contains('text-bg-danger')) {
-                     elements.statusBar.innerHTML = '';
+            },
+
+            renderChatHistory() {
+                this.elements.chatContainer.innerHTML = '';
+                this.state.chatHistory.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `chat-message ${msg.role}-message d-flex gap-3 mb-3`;
+                    div.innerHTML = `
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink:0">
+                            ${msg.role === 'user' ? 'U' : 'L'}
+                        </div>
+                        <div class="message-body p-3 border rounded-3 w-100 bg-body">
+                            ${marked.parse(msg.content)}
+                        </div>
+                    `;
+                    this.elements.chatContainer.appendChild(div);
+                });
+                this.elements.chatContainer.scrollTop = this.elements.chatContainer.scrollHeight;
+            },
+
+            async loadSession(id) {
+                const data = await DB.getChat(id);
+                if (data) {
+                    this.state.currentSessionId = id;
+                    this.state.chatHistory = data.history;
+                    this.renderChatHistory();
+                    this.loadSessionList();
                 }
+            },
+
+            startNewSession() {
+                this.state.currentSessionId = null;
+                this.state.chatHistory = [];
+                this.elements.chatContainer.innerHTML = `
+                    <div class="empty-state text-center h-100 d-flex flex-column justify-content-center">
+                        <h2>LlamaHTML</h2>
+                        <p class="text-body-secondary">New local session started.</p>
+                    </div>`;
+                this.loadSessionList();
+            },
+
+            async loadSessionList() {
+                const sessions = await DB.getAllSessions();
+                this.elements.sessionsList.innerHTML = sessions.map(s => `
+                    <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center ${s.id === this.state.currentSessionId ? 'active' : ''}" data-session-id="${s.id}">
+                        <div class="text-truncate" style="max-width: 180px;">${this.escapeHtml(s.name)}</div>
+                        <button class="btn-close btn-close-white delete-btn" style="font-size: 0.7rem;"></button>
+                    </a>
+                `).join('');
+            },
+
+            handleFileSelection(e) {
+                const files = Array.from(e.target.files);
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (ev) => {
+                        this.state.stagedFiles.push({ name: file.name, content: ev.target.result });
+                        this.renderStagedFiles();
+                    };
+                    reader.readAsText(file);
+                });
+            },
+
+            renderStagedFiles() {
+                this.elements.stagedFilesArea.style.display = this.state.stagedFiles.length ? 'flex' : 'none';
+                this.elements.stagedFilesArea.innerHTML = this.state.stagedFiles.map((f, i) => `
+                    <span class="badge text-bg-secondary mb-2" onclick="App.removeStagedFile(${i})">${f.name}</span>
+                `).join('');
+            },
+
+            removeStagedFile(index) {
+                // In a real app, we'd make this a method on the DOM element or pass `this`
+                // For simplicity in this inline script, we'll just splice the array and re-render
+                // Note: This requires `App` to be in scope, which it is.
+                // To make the onclick work properly with closure in innerHTML:
+                this.state.stagedFiles.splice(index, 1);
+                this.renderStagedFiles();
+            },
+
+            updateButtonUI(loading) {
+                this.elements.sendButton.textContent = loading ? 'Stop' : 'Send';
+                this.elements.sendButton.classList.toggle('btn-danger', loading);
+                this.elements.sendButton.classList.toggle('btn-primary', !loading);
+            },
+
+            showStatus(msg, type) {
+                this.elements.statusBar.textContent = msg;
+                this.elements.statusBar.className = `status-bar text-center small mt-2 text-${type}`;
+            },
+
+            escapeHtml(unsafe) {
+                return unsafe.replace(/[&<"']/g, m => ({'&':'&amp;','<':'&lt;','"':'&quot;',"'":"&#039;"}[m]));
             }
-        }
-        function showStatus(message, type = "info") { 
-            showLoading(false);
-            elements.statusBar.className = `status-bar text-center small mt-2 p-1 rounded-pill text-bg-${type}`;
-            elements.statusBar.textContent = message;
-            if (type !== 'danger' && type !== 'warning') {
-                setTimeout(() => {
-                    if (elements.statusBar.textContent === message) {
-                       elements.statusBar.textContent = '';
-                       elements.statusBar.className = 'status-bar text-center text-body-secondary small mt-2';
-                    }
-                }, 4000);
-            }
-        }
-        function createMessageElement(message) {
-            const messageWrapper = document.createElement('div');
-            messageWrapper.className = `chat-message ${message.role}-message d-flex gap-3 mb-3`;
-            messageWrapper.dataset.messageId = message.id;
-            const avatar = `<div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px; flex-shrink: 0;">${message.role === 'user' ? 'U' : 'L'}</div>`;
-            const bodyDiv = `<div class="message-body p-3 border rounded-3 w-100">${message.content || ''}</div>`;
-            messageWrapper.innerHTML = avatar + bodyDiv;
-            const bodyElement = messageWrapper.querySelector('.message-body');
-            if (message.role === 'model' && message.content) {
-                bodyElement.innerHTML = marked.parse(message.content);
-                requestAnimationFrame(() => addCodeActionsToBubble(bodyElement));
-            } else if(message.role === 'user') {
-                bodyElement.textContent = message.content;
-            }
-            return messageWrapper;
-        }
-        function renderChatHistory() {
-            if (chatHistory.length === 0) {
-                elements.chatContainer.innerHTML = `<div class="empty-state text-center h-100 d-flex flex-column justify-content-center align-items-center"><div><h2>LlamaHTML</h2><p class="lead text-body-secondary">Start a conversation with your local Llama model</p></div></div>`;
-            } else {
-                elements.chatContainer.innerHTML = '';
-                chatHistory.forEach(message => elements.chatContainer.appendChild(createMessageElement(message)));
-                scrollToBottom();
-            }
-            updateSaveButtonState();
-        }
-        function updateModelBubbleContent(messageId, newContent, isStreamingUpdate = false) {
-            const messageDiv = document.querySelector(`.model-message[data-message-id="${messageId}"] .message-body`);
-            if (!messageDiv) return;
-            messageDiv.innerHTML = marked.parse(newContent || (isStreamingUpdate ? "" : "[Empty Response]"));
-            addCodeActionsToBubble(messageDiv);
-            if(isStreamingUpdate) scrollToBottom();
-        }
-        function addCodeActionsToBubble(container) {
-            container.querySelectorAll('pre').forEach(pre => {
-                if (pre.querySelector('.code-actions')) return;
-                pre.style.position = 'relative';
-                const codeElement = pre.querySelector('code');
-                if (!codeElement) return;
-                const actionsContainer = document.createElement('div');
-                actionsContainer.className = 'code-actions';
-                actionsContainer.innerHTML = `
-                    <button class="code-action-button copy-code-button" title="Copy code">Copy</button>
-                    <button class="code-action-button download-code-button" title="Download code">Download</button>
-                `;
-                pre.prepend(actionsContainer);
-            });
-        }
-        function handleCopyCodeClick(button) {
-            const code = button.closest('pre')?.querySelector('code')?.textContent || '';
-            navigator.clipboard.writeText(code).then(() => {
-                button.textContent = 'Copied!';
-                button.classList.add('copied');
-                setTimeout(() => {
-                    button.textContent = 'Copy';
-                    button.classList.remove('copied');
-                }, 2000);
-            });
-        }
-        function handleDownloadCodeClick(button) {
-            const pre = button.closest('pre');
-            const code = pre?.querySelector('code');
-            if (!code) return;
-            const langClass = Array.from(code.classList).find(c => c.startsWith('language-'));
-            const lang = langClass ? langClass.replace('language-', '') : 'txt';
-            const blob = new Blob([code.textContent], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `code-${lang}.${lang}`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-        function escapeHtml(unsafe) {
-            return unsafe.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
-        function scrollToBottom() {
-            elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
-        }
-        function getSessionIndex() {
-            try {
-                const index = JSON.parse(localStorage.getItem(SESSION_INDEX_KEY));
-                return Array.isArray(index) ? index : [];
-            } catch { return []; }
-        }
-        function saveSessionIndex(index) {
-            localStorage.setItem(SESSION_INDEX_KEY, JSON.stringify(index));
-        }
-        function populateSessions() {
-            const sessions = getSessionIndex();
-            elements.sessionsList.innerHTML = '';
-            sessions.forEach(session => {
-                const item = document.createElement('a');
-                item.href = '#';
-                item.className = `list-group-item list-group-item-action d-flex justify-content-between align-items-center ${session.id === currentSessionId ? 'active' : ''}`;
-                item.dataset.sessionId = session.id;
-                item.textContent = session.name;
-                item.innerHTML += `<button class="btn-close delete-btn" title="Delete session"></button>`;
-                elements.sessionsList.appendChild(item);
-            });
-        }
-        function startNewSession() {
-            if (currentAbortController) currentAbortController.abort();
-            chatHistory = [];
-            currentSessionId = null;
-            messageCounter = 0;
-            clearStagedFiles();
-            renderChatHistory();
-            showStatus("");
-            updateSendButtonState();
-            populateSessions(); 
-            elements.chatInput.focus();
-        }
-        function handleSaveSession() {
-            const sessions = getSessionIndex();
-            let existingSession = currentSessionId ? sessions.find(s => s.id === currentSessionId) : null;
-            let defaultName = existingSession ? existingSession.name : `Chat ${new Date().toLocaleString()}`;
-            const sessionName = prompt("Enter a name for this session:", defaultName);
-            if (!sessionName?.trim()) return;
-            const trimmedName = sessionName.trim();
-            if (!currentSessionId && sessions.some(s => s.name === trimmedName)) {
-                if (!confirm(`A session named "${trimmedName}" already exists. Overwrite?`)) return;
-                const conflictId = sessions.find(s => s.name === trimmedName).id;
-                localStorage.removeItem(`${SESSION_DATA_PREFIX}${conflictId}`);
-                saveSessionIndex(sessions.filter(s => s.id !== conflictId));
-            }
-            const sessionIdToSave = currentSessionId || `${Date.now()}`;
-            if (!existingSession) {
-                sessions.push({ id: sessionIdToSave, name: trimmedName });
-                currentSessionId = sessionIdToSave;
-            } else {
-                existingSession.name = trimmedName;
-            }
-            localStorage.setItem(`${SESSION_DATA_PREFIX}${sessionIdToSave}`, JSON.stringify(chatHistory));
-            saveSessionIndex(sessions);
-            populateSessions();
-            showStatus(`Session "${trimmedName}" saved.`, "success");
-        }
-        function handleLoadSession(sessionId) {
-            const hasUnsavedChanges = chatHistory.length > 0 && !currentSessionId;
-            if (hasUnsavedChanges && !confirm("Loading a session will discard the current unsaved chat. Continue?")) return;
-            try {
-                const historyJson = localStorage.getItem(`${SESSION_DATA_PREFIX}${sessionId}`);
-                chatHistory = JSON.parse(historyJson) || [];
-                currentSessionId = sessionId;
-                renderChatHistory();
-                populateSessions();
-                showStatus("Session loaded.", "info");
-            } catch(e) {
-                showStatus("Failed to load session.", "danger");
-            }
-        }
-        function handleDeleteSession(sessionId) {
-            const sessions = getSessionIndex();
-            const session = sessions.find(s => s.id === sessionId);
-            if (!session || !confirm(`Delete session "${session.name}"? This cannot be undone.`)) return;
-            localStorage.removeItem(`${SESSION_DATA_PREFIX}${sessionId}`);
-            saveSessionIndex(sessions.filter(s => s.id !== sessionId));
-            if (currentSessionId === sessionId) startNewSession();
-            populateSessions();
-            showStatus(`Session "${session.name}" deleted.`, "info");
-        }
-        function updateSaveButtonState() {
-            const canSave = chatHistory.length > 0 && !currentAbortController;
-            elements.saveSessionButton.disabled = !canSave;
-        }
-        const saveSessionButton = document.createElement('button');
-        saveSessionButton.id = 'saveSessionButton';
-        saveSessionButton.className = 'btn btn-outline-primary';
-        saveSessionButton.textContent = 'Save Chat';
-        saveSessionButton.addEventListener('click', handleSaveSession);
-        document.getElementById('sidebar-header').appendChild(saveSessionButton);
-        elements.saveSessionButton = saveSessionButton;
-        initialize();
+        };
+
+        // Expose removeStagedFile to window for inline onclick handling
+        window.removeStagedFile = (index) => App.removeStagedFile(index);
+
+        // Initialize
+        App.init();
     </script>
 </body>
 </html>
+
