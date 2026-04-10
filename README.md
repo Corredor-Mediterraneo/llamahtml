@@ -71,3 +71,10 @@ This web app provides a user interface for interacting with a local llama.cpp se
 
 The app is built with HTML, CSS, and JavaScript.  The source code is available in the provided HTML file.  You can modify and extend it as needed.
 
+**Changes in this branch**
+It uses firefox Indexed DB to store the data, and allows to store different chats.
+
+**llama.cpp backend used**
+llama-server.exe  -ngl 40 --n-cpu-moe 40 -c 250000 -t 12 -tb 16 -b 4096 --ubatch-size 2048 --flash-attn on --cache-type-k q8_0 --cache-type-v q8_0 --mlock  -m ./Qwen3.5-35B-A3B-heretic-Opus-4.6-Distilled.i1-Q4_K_M.gguf --host 0.0.0.0 --port 8080
+
+Running fine on an NVIDIA 3060 (12 GB VRAM) in a windows 11 with 32 Gb of RAM
